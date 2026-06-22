@@ -185,6 +185,8 @@ def main():
     g.add_argument("--voice-id", default=None, help="复用已克隆的 voice_id")
     g.add_argument("--voice-engine", default="elevenlabs", help="克隆引擎: elevenlabs / minimax")
     g.add_argument("--qc-retry", type=int, default=2, help="每段视频质检不过最多重生成次数(0=关质检)")
+    g.add_argument("--no-subtitle", action="store_true", help="输出无字幕底片(供外部做逐句/逐词渐进字幕)")
+    g.add_argument("--variant", type=int, default=0, help="批量序号:每10个换一个场景房间(幅度小、避免穿帮)。批量时传 0,1,2…")
     g.add_argument("--out", default="", help="下载文件名(默认 vf_<persona>_<task>.mp4)")
     g.add_argument("--no-wait", action="store_true", help="异步:只提交、不等待、不下载(批量场景)")
     g.add_argument("--keep-remote", action="store_true", help="保留服务器成片(默认下载到本地后删，不停留服务器)")
@@ -194,7 +196,7 @@ def main():
     d.add_argument("task_id")
     d.add_argument("--out", default="video.mp4")
     d.add_argument("--keep-remote", action="store_true", help="保留服务器成片")
-    en = sub.add_parser("enroll", help="自定义数字人:真人照片→生5角度稿")
+    en = sub.add_parser("enroll", help="自定义数字人:用真人照片建专属数字人(真人照片为核心参考)")
     en.add_argument("--persona-id", required=True, help="数字人 id(英文)")
     en.add_argument("--name", default="", help="名字")
     en.add_argument("--photo", required=True, help="真实人物照片(本地路径)")
@@ -233,6 +235,8 @@ def main():
             "voice_id": a.voice_id,
             "voice_engine": a.voice_engine,
             "qc_retry": a.qc_retry,
+            "no_subtitle": a.no_subtitle,
+            "variant": a.variant,
         }
         tid = generate(a.topic, a.persona, opts)
         if a.no_wait:
@@ -253,7 +257,7 @@ def main():
         import base64
         def _img_b64(p):
             return "data:image/png;base64," + base64.b64encode(open(p, "rb").read()).decode()
-        print("⏳ 生成 5 角度人物稿(基于你的真人照片，约 1–3 分钟)…")
+        print("⏳ 建数字人(真人照片为核心参考 + 多角度/场景稿补充，约 1–3 分钟)…")
         code, body = _req("POST", "/enroll", {
             "persona_id": a.persona_id, "name": a.name,
             "person_photo_b64": _img_b64(a.photo),
