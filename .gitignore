@@ -1,0 +1,15 @@
+# 绝不提交真实 key
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# 产物
+*.mp4
+*.mp3
+out/
+output/
+
+# OS
+.DS_Store
