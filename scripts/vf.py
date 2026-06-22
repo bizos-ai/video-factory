@@ -4,6 +4,7 @@
 执行层（选题 / 脚本 / 内容审查 / 配音 / 数字人 A-roll / 对口型 / 字幕 / 合成）
 全部在服务器完成。本脚本不含任何算法、源 key 或 pipeline 实现，只做：
 
+  intro     —— 开场动画
   auth      —— 首次授权：保存你的 API KEY 到 .env 并验证
   verify    —— 验证 key 是否有效且已开通视频权限，列出可用人设
   generate  —— 提交一个生成任务（主题 + 人设）
@@ -41,6 +42,39 @@ def _load_env():
 _load_env()
 
 BASE = os.environ.get("VF_BASE_URL", "https://h2-bottle.com/v1/video").rstrip("/")
+
+
+def banner():
+    """开场动画。真实终端(tty)播放 ANSI 动画；非 tty(管道/被捕获)降级为静态 banner。
+    设 VF_NO_ANIM=1 可强制跳过动画。"""
+    R, B, DIM = "\033[0m", "\033[1m", "\033[2m"
+    CY, GN, WH = "\033[96m", "\033[92m", "\033[97m"
+    anim = sys.stdout.isatty() and os.environ.get("VF_NO_ANIM") != "1"
+    W = 44
+
+    def line(s, d=0.05):
+        print(s)
+        if anim:
+            time.sleep(d)
+
+    print()
+    line(CY + "  ╔" + "═" * W + "╗" + R, 0.05)
+    line(CY + "  ║" + R, 0.02)
+    line(CY + "  ║   " + B + WH + "🎬  V I D E O   F A C T O R Y" + R, 0.08)
+    line(CY + "  ║   " + DIM + "──────────────────────────────" + R, 0.05)
+    line(CY + "  ║   " + GN + "真人口播短视频工厂 · 瘦客户端" + R, 0.06)
+    line(CY + "  ║   " + DIM + "⚡ 执行在服务器，你只管下指令" + R, 0.06)
+    line(CY + "  ║" + R, 0.02)
+    line(CY + "  ╚" + "═" * W + "╝" + R, 0.05)
+    if anim:
+        frames = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+        for i in range(18):
+            sys.stdout.write("\r   " + CY + frames[i % len(frames)] + R + DIM + "  连接视频工厂…" + R)
+            sys.stdout.flush()
+            time.sleep(0.06)
+        sys.stdout.write("\r" + " " * 38 + "\r")
+        sys.stdout.flush()
+    print()
 
 
 def _key():
@@ -161,6 +195,7 @@ def download(tid, out):
 def main():
     ap = argparse.ArgumentParser(description="BIZOS Video Factory 瘦客户端")
     sub = ap.add_subparsers(dest="cmd")
+    sub.add_parser("intro", help="开场动画")
     au = sub.add_parser("auth", help="首次授权：保存 API KEY 到 .env 并验证")
     au.add_argument("key", help="管理员发放的 API KEY（sk-xxx）")
     sub.add_parser("verify", help="验证 key 并列出可用人设")
@@ -176,7 +211,9 @@ def main():
     d.add_argument("--out", default="video.mp4")
     a = ap.parse_args()
 
-    if a.cmd == "auth":
+    if a.cmd == "intro":
+        banner()
+    elif a.cmd == "auth":
         save_key(a.key)
     elif a.cmd == "verify":
         verify()
@@ -195,6 +232,7 @@ def main():
     elif a.cmd == "download":
         download(a.task_id, a.out)
     else:
+        banner()
         ap.print_help()
 
 
