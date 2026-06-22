@@ -83,8 +83,8 @@ python scripts/vf.py verify
   - `avatar`（默认）：头像 + 配音 → 对口型说话（约 10+ 分钟，慢但稳）
   - `motion`：头像 + **参考动作视频** → 模仿动作，需 `--ref-video <URL>`
   - `omni`：prompt + 头像参考图 → 多模态生成，可配 `--prompt` `--duration`
-- `--ref-image <URL>`：换头像 / 可灵首帧
-- `--ref-video <URL>`：可灵 motion 的参考动作视频（URL，接口吃 URL 不吃本地文件）
+- `--ref-image <本地图 或 URL>`：**自定义形象图** —— 海螺/可灵图生视频用它当首帧，解锁金发等自定义形象（不再固定 persona 头像）。本地图片直接传路径即可
+- `--ref-video <URL>`：参考视频 —— 可灵 motion 用作动作参考；`--backend fal` 时**对这个已有视频单独对口型**（贴上克隆/EL 配音的口型）
 - `--voice-ref <音频文件>`：传一段**参考音频** → EL 克隆那个音色来配音（**解锁自定义音色**，不限 persona 固定音色；铺量海螺路线也能用）
 - `--voice-id <id>`：复用已克隆的 voice_id（省一次克隆，10s–5min 清晰人声样本即可）
 

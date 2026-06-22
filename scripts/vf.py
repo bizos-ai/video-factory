@@ -171,7 +171,7 @@ def main():
     g.add_argument("--persona", default="nutrition_nadia", help="人设 id（用 verify 查看）")
     g.add_argument("--backend", default=None, help="输出模型: hailuo / fal / kling / mock（默认服务器设定）")
     g.add_argument("--kling-mode", default="avatar", help="可灵模式: avatar(对口型) / motion(动作控制) / omni(多模态)")
-    g.add_argument("--ref-image", default=None, help="参考图 URL（换头像 / 可灵首帧）")
+    g.add_argument("--ref-image", default=None, help="自定义形象图：本地图片路径 或 URL（海螺/可灵图生视频用它当首帧，解锁金发等自定义形象）")
     g.add_argument("--ref-video", default=None, help="参考动作视频 URL（可灵 motion 用）")
     g.add_argument("--orient", default="image", help="motion 朝向: image / video")
     g.add_argument("--duration", default="5", help="omni 时长(秒)")
@@ -198,10 +198,19 @@ def main():
             import base64
             with open(a.voice_ref, "rb") as vf:
                 voice_ref_b64 = "data:audio/mpeg;base64," + base64.b64encode(vf.read()).decode()
+        ref_image_url, ref_image_b64 = None, None
+        if a.ref_image:
+            if os.path.exists(a.ref_image):
+                import base64
+                with open(a.ref_image, "rb") as imf:
+                    ref_image_b64 = "data:image/png;base64," + base64.b64encode(imf.read()).decode()
+            else:
+                ref_image_url = a.ref_image
         opts = {
             "aroll_backend": a.backend,
             "kling_mode": a.kling_mode,
-            "reference_image_url": a.ref_image,
+            "reference_image_url": ref_image_url,
+            "reference_image_b64": ref_image_b64,
             "reference_video_url": a.ref_video,
             "character_orientation": a.orient,
             "duration": a.duration,
