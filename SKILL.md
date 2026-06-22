@@ -77,6 +77,16 @@ python scripts/vf.py generate --topic "..." --persona fit_faye --backend kling -
 
 ---
 
+## 自定义数字人（enroll）
+
+用**真实人物照片**建一个专属数字人 —— GPT 基于真人生成 5 个角度的形象稿（比固定头像更真、海螺出片更稳，不会后半段失控）：
+
+```bash
+python scripts/vf.py enroll --persona-id mychar --name "小美" --photo 真人照片.jpg --scenes 厨房.jpg 客厅.jpg
+```
+
+约 1–3 分钟。建好后 `--persona mychar` 就能生成。**参考照片越真实，出片质量越高。**
+
 ## 命令参考
 
 | 命令 | 说明 |

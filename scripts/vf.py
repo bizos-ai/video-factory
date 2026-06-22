@@ -194,6 +194,12 @@ def main():
     d.add_argument("task_id")
     d.add_argument("--out", default="video.mp4")
     d.add_argument("--keep-remote", action="store_true", help="保留服务器成片")
+    en = sub.add_parser("enroll", help="自定义数字人:真人照片→生5角度稿")
+    en.add_argument("--persona-id", required=True, help="数字人 id(英文)")
+    en.add_argument("--name", default="", help="名字")
+    en.add_argument("--photo", required=True, help="真实人物照片(本地路径)")
+    en.add_argument("--scenes", nargs="*", default=[], help="场景图(本地路径,可多张)")
+    en.add_argument("--voice-id", default=None, help="可选:已克隆音色 voice_id")
     a = ap.parse_args()
 
     if a.cmd == "auth":
@@ -243,6 +249,22 @@ def main():
         download(a.task_id, a.out)
         if not a.keep_remote:
             delete_remote(a.task_id)
+    elif a.cmd == "enroll":
+        import base64
+        def _img_b64(p):
+            return "data:image/png;base64," + base64.b64encode(open(p, "rb").read()).decode()
+        print("⏳ 生成 5 角度人物稿(基于你的真人照片，约 1–3 分钟)…")
+        code, body = _req("POST", "/enroll", {
+            "persona_id": a.persona_id, "name": a.name,
+            "person_photo_b64": _img_b64(a.photo),
+            "scene_photos_b64": [_img_b64(s) for s in a.scenes],
+            "voice_id": a.voice_id,
+        }, timeout=600)
+        if code == 200:
+            print(f"✅ 自定义数字人 '{a.persona_id}' 已建好：{body}")
+            print(f"   现在可用：python scripts/vf.py generate --topic \"...\" --persona {a.persona_id}")
+        else:
+            sys.exit(f"❌ enroll 失败 HTTP {code}: {body}")
     else:
         ap.print_help()
 
