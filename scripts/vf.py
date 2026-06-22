@@ -157,7 +157,17 @@ def download(tid, out):
         sys.exit(f"❌ 下载失败 HTTP {code}: {body}")
     with open(out, "wb") as f:
         f.write(body)
-    print(f"✅ 已下载成片：{out}（{len(body)} bytes）")
+    print(f"✅ 已下载成片到本地：{out}（{len(body)} bytes）")
+
+
+def delete_remote(tid):
+    """下载到本地后删服务器的成片+中间产物(结果不停留服务器)。"""
+    code, body = _req("DELETE", f"/file/{tid}")
+    if code == 200:
+        n = body.get("deleted", "?") if isinstance(body, dict) else "?"
+        print(f"🧹 已清理服务器(task {tid[:8]}，删 {n} 个文件)")
+    else:
+        print(f"⚠️ 服务器清理未成功 HTTP {code}（成片已在本地，不影响）")
 
 
 def main():
@@ -179,13 +189,15 @@ def main():
     g.add_argument("--voice-ref", default=None, help="参考音色音频文件(本地路径，克隆该音色来配音)")
     g.add_argument("--voice-id", default=None, help="复用已克隆的 voice_id")
     g.add_argument("--voice-engine", default="elevenlabs", help="克隆引擎: elevenlabs / minimax")
-    g.add_argument("--wait", action="store_true", help="阻塞等到出片")
-    g.add_argument("--out", default="", help="出片后下载到此文件（需配合 --wait）")
+    g.add_argument("--out", default="", help="下载文件名(默认 vf_<persona>_<task>.mp4)")
+    g.add_argument("--no-wait", action="store_true", help="异步:只提交、不等待、不下载(批量场景)")
+    g.add_argument("--keep-remote", action="store_true", help="保留服务器成片(默认下载到本地后删，不停留服务器)")
     s = sub.add_parser("status", help="查任务状态")
     s.add_argument("task_id")
-    d = sub.add_parser("download", help="下载成片")
+    d = sub.add_parser("download", help="下载成片(默认下载后删服务器)")
     d.add_argument("task_id")
     d.add_argument("--out", default="video.mp4")
+    d.add_argument("--keep-remote", action="store_true", help="保留服务器成片")
     a = ap.parse_args()
 
     if a.cmd == "auth":
@@ -220,18 +232,20 @@ def main():
             "voice_engine": a.voice_engine,
         }
         tid = generate(a.topic, a.persona, opts)
-        if a.wait:
-            url = wait(tid)
-            if url:
-                print(f"🎬 完成。在线地址（需带 key 访问）：{BASE}{url.replace('/v1/video', '')}")
-            if a.out:
-                download(tid, a.out)
+        if a.no_wait:
+            print(f"已提交(异步)。轮询: python scripts/vf.py status {tid}")
         else:
-            print(f"轮询：python scripts/vf.py status {tid}")
+            wait(tid)
+            out = a.out or f"vf_{a.persona}_{tid[:8]}.mp4"
+            download(tid, out)
+            if not a.keep_remote:
+                delete_remote(tid)
     elif a.cmd == "status":
         print(json.dumps(status(a.task_id), ensure_ascii=False, indent=2))
     elif a.cmd == "download":
         download(a.task_id, a.out)
+        if not a.keep_remote:
+            delete_remote(a.task_id)
     else:
         ap.print_help()
 

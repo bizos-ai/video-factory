@@ -68,9 +68,8 @@ python scripts/vf.py verify
    - 选哪个人设 `persona_id`（从 verify 列出的里选；每个号有固定头像/音色，跨视频不变）
 2. **提交并等待出片**：
    ```bash
-   python scripts/vf.py generate --topic "..." --persona <persona_id> --wait --out out.mp4
-   ```
-   生成约 3–7 分钟。完成后把 `out.mp4` 和在线地址交给用户。
+   python scripts/vf.py generate --topic "..." --persona <persona_id>   ```
+   生成约 3–7 分钟。**完成后自动下载到本地**（`vf_<persona>_<task>.mp4`）并删除服务器成片（结果不停留服务器），把本地文件交给用户。批量场景加 `--no-wait` 只提交不等。
 
 ---
 
@@ -91,10 +90,8 @@ python scripts/vf.py verify
 例：
 ```bash
 # 可灵对口型
-python scripts/vf.py generate --topic "..." --persona sleep_sam --backend kling --kling-mode avatar --wait --out out.mp4
-# 可灵动作控制（传参考视频）
-python scripts/vf.py generate --topic "..." --persona fit_faye --backend kling --kling-mode motion --ref-video https://xxx/dance.mp4 --wait --out out.mp4
-```
+python scripts/vf.py generate --topic "..." --persona sleep_sam --backend kling --kling-mode avatar# 可灵动作控制（传参考视频）
+python scripts/vf.py generate --topic "..." --persona fit_faye --backend kling --kling-mode motion --ref-video https://xxx/dance.mp4```
 
 > 接口只吃文字主题 + 这些参数；参考素材要先有可访问 URL。不传任何参数时等价于服务器默认（海螺 + fal 对口型）。
 
@@ -104,7 +101,7 @@ python scripts/vf.py generate --topic "..." --persona fit_faye --backend kling -
 |------|------|
 | `python scripts/vf.py auth <key>` | 首次授权：保存 KEY 到 .env 并验证 |
 | `python scripts/vf.py verify` | 验证授权 + 列出可用人设 |
-| `python scripts/vf.py generate --topic "..." --persona <id> [--wait --out file.mp4]` | 提交生成任务 |
+| `python scripts/vf.py generate --topic "..." --persona <id> [--out 文件名] [--no-wait]` | 提交→默认等出片+下载本地+删服务器 |
 | `python scripts/vf.py status <task_id>` | 查任务状态 |
 | `python scripts/vf.py download <task_id> --out file.mp4` | 下载成片 |
 
