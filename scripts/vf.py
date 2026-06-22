@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-"""BIZOS Video Factory — 瘦客户端 (thin client)。
+"""Video Factory CLI.
 
-执行层（选题 / 脚本 / 内容审查 / 配音 / 数字人 A-roll / 对口型 / 字幕 / 合成）
-全部在服务器完成。本脚本不含任何算法、源 key 或 pipeline 实现，只做：
-
-  auth      —— 首次授权：保存你的 API KEY 到 .env 并验证
-  verify    —— 验证 key 是否有效且已开通视频权限，列出可用人设
-  generate  —— 提交一个生成任务（主题 + 人设）
-  status    —— 查任务状态
-  download  —— 下载成片
-
-API key 经服务器的 token hub 校验；只有被管理员开通「视频」权限的子 key 才能用。
+  auth      授权:保存 API KEY 并验证
+  verify    验证 key + 列出可用人设
+  generate  生成视频(主题 + 人设)
+  status    查任务状态
+  download  下载成片
 """
 import os
 import sys
@@ -102,7 +97,7 @@ def verify():
     code, body = _req("GET", "/health")
     if code == 200 and isinstance(body, dict) and body.get("ok"):
         ps = body.get("personas", [])
-        print("✅ 授权成功，已开通视频工厂。可用人设 (persona_id)：")
+        print("✅ 授权成功。可用人设 (persona_id)：")
         for p in ps:
             print(f"   - {p}")
         return ps
@@ -171,7 +166,7 @@ def delete_remote(tid):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="BIZOS Video Factory 瘦客户端")
+    ap = argparse.ArgumentParser(description="BIZOS Video Factory")
     sub = ap.add_subparsers(dest="cmd")
     au = sub.add_parser("auth", help="首次授权：保存 API KEY 到 .env 并验证")
     au.add_argument("key", help="管理员发放的 API KEY（sk-xxx）")

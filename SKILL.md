@@ -1,13 +1,11 @@
 ---
 name: bizos-video-factory
-description: 生成真人口播短视频（海外英文，投 TikTok / YouTube Shorts / Reels）。当用户输入 /bizos-video-factory，或要做口播短视频、批量短视频、数字人口播视频时使用。这是瘦客户端——所有执行在服务器；调用时先做 API KEY 授权，授权通过后再进入视频制作流程。
+description: 生成真人口播短视频（海外英文，投 TikTok / YouTube Shorts / Reels）。当用户输入 /bizos-video-factory，或要做口播短视频、批量短视频、数字人口播视频时使用。调用前先授权 API KEY，授权通过后再生成。
 ---
 
-# BIZOS Video Factory（瘦客户端）
+# BIZOS Video Factory
 
-通过 h2-bottle 视频工厂生成真人口播短视频。**所有执行（选题 / 脚本 / 内容审查 / 配音 / 数字人 A-roll / 对口型 / 字幕 / 合成）都在服务器完成**，本 skill 不含任何算法、源 key 或 pipeline 实现。
-
-> **被调用时：先原样输出启动画面 → 授权 API KEY → 授权通过才进入视频制作。**
+> **被调用时：先原样输出启动画面 → 授权 API KEY → 生成视频。**
 
 ---
 
@@ -26,88 +24,71 @@ description: 生成真人口播短视频（海外英文，投 TikTok / YouTube S
 ║   ██████╔╝   ██║    ███████╗  ╚██████╔╝   ███████║            ║
 ║   ╚═════╝    ╚═╝    ╚══════╝   ╚═════╝    ╚══════╝            ║
 ║                                                                ║
-║           真人口播短视频工厂  ·  瘦客户端                      ║
+║                真人口播短视频工厂                              ║
 ║                                                                ║
-║      授权即用  ·  执行在服务器  ·  3–7 分钟出片                ║
+║          授权即用  ·  3–7 分钟出片  ·  自动落地                ║
 ║                                                                ║
 ╚════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## 第一步：授权 API KEY（启动画面后立即做）
+## 第一步：授权 API KEY（每次调用先做）
 
-先检查当前授权状态：
+先检查授权状态：
 
 ```bash
 python scripts/vf.py verify
 ```
 
-根据结果：
-
-- **✅ 验证通过**（200，列出可用人设）→ 已授权，直接进入「第二步：视频制作」。
-- **❌ 未授权 / 401**（还没填 key 或 key 无效）→ **向用户索要 API KEY**：
-  > 「请提供你的视频工厂 API KEY（管理员发放的 `sk-xxx`）：」
-  
-  拿到 key 后保存并验证（一步到位）：
+- **✅ 通过**（列出可用人设）→ 进入「第二步」。
+- **❌ 401 / 未授权** → 向用户索要 API KEY（`sk-xxx`），拿到后：
   ```bash
   python scripts/vf.py auth <用户提供的KEY>
   ```
-  - 成功 → 进入「第二步」。
-  - 仍 `401` → key 填错了，请用户核对后重新 `auth`。
-  - `403` → key 有效但**没开通视频权限**，让用户找管理员在 `admin.html` 给这个 key 打开「视频」开关，开通后再来。
-  
+  仍 `401` → key 填错，请用户核对重试。`403` → 让用户找管理员在 `admin.html` 开通「视频」开关。
   **授权不通过，不要进入第二步。**
 
 ---
 
-## 第二步：视频制作流程（授权通过后）
+## 第二步：生成视频（授权通过后）
 
-1. **问用户两件事**：
-   - 视频主题 `topic`（英文短句，如 `3 simple habits for better sleep`）
-   - 选哪个人设 `persona_id`（从 verify 列出的里选；每个号有固定头像/音色，跨视频不变）
-2. **提交并等待出片**：
+1. **问用户**：视频主题 `topic`（英文短句）+ 人设 `persona_id`（从 verify 列出的里选）。
+2. **生成**：
    ```bash
-   python scripts/vf.py generate --topic "..." --persona <persona_id>   ```
-   生成约 3–7 分钟。**完成后自动下载到本地**（`vf_<persona>_<task>.mp4`）并删除服务器成片（结果不停留服务器），把本地文件交给用户。批量场景加 `--no-wait` 只提交不等。
+   python scripts/vf.py generate --topic "3 simple habits for better sleep" --persona sleep_sam
+   ```
+   生成约 3–7 分钟。**完成后自动下载到本地**（`vf_<persona>_<task>.mp4`），把本地文件交给用户。批量场景加 `--no-wait` 只提交不等。
 
 ---
 
-## 高级：指定输出模型 / 传参考（可选）
+## 高级参数（可选）
 
-默认走服务器设定的数字人方式。要**指定模型**或**传参考**时，generate 支持这些参数：
+- `--backend kling`：用可灵生成（其它：`hailuo` / `fal` / `mock`）
+  - `--kling-mode avatar|motion|omni`（motion 需 `--ref-video <URL>`）
+- `--ref-image <本地图 或 URL>`：自定义形象图（图生视频用它当首帧）
+- `--ref-video <URL>`：参考动作视频（可灵 motion）/ `--backend fal` 时对已有视频对口型
+- `--voice-ref <音频文件>`：传一段参考音频，用它的音色配音（不限固定音色）
+- `--voice-id <id>`：复用已克隆的 voice_id
 
-- `--backend kling` —— 用可灵生成（其它可选：`hailuo` / `fal` / `mock`）
-- `--kling-mode avatar|motion|omni`：
-  - `avatar`（默认）：头像 + 配音 → 对口型说话（约 10+ 分钟，慢但稳）
-  - `motion`：头像 + **参考动作视频** → 模仿动作，需 `--ref-video <URL>`
-  - `omni`：prompt + 头像参考图 → 多模态生成，可配 `--prompt` `--duration`
-- `--ref-image <本地图 或 URL>`：**自定义形象图** —— 海螺/可灵图生视频用它当首帧，解锁金发等自定义形象（不再固定 persona 头像）。本地图片直接传路径即可
-- `--ref-video <URL>`：参考视频 —— 可灵 motion 用作动作参考；`--backend fal` 时**对这个已有视频单独对口型**（贴上克隆/EL 配音的口型）
-- `--voice-ref <音频文件>`：传一段**参考音频** → EL 克隆那个音色来配音（**解锁自定义音色**，不限 persona 固定音色；铺量海螺路线也能用）
-- `--voice-id <id>`：复用已克隆的 voice_id（省一次克隆，10s–5min 清晰人声样本即可）
-
-例：
 ```bash
-# 可灵对口型
-python scripts/vf.py generate --topic "..." --persona sleep_sam --backend kling --kling-mode avatar# 可灵动作控制（传参考视频）
-python scripts/vf.py generate --topic "..." --persona fit_faye --backend kling --kling-mode motion --ref-video https://xxx/dance.mp4```
+python scripts/vf.py generate --topic "..." --persona fit_faye --backend kling --kling-mode motion --ref-video https://xxx/dance.mp4
+```
 
-> 接口只吃文字主题 + 这些参数；参考素材要先有可访问 URL。不传任何参数时等价于服务器默认（海螺 + fal 对口型）。
+---
 
 ## 命令参考
 
 | 命令 | 说明 |
 |------|------|
-| `python scripts/vf.py auth <key>` | 首次授权：保存 KEY 到 .env 并验证 |
+| `python scripts/vf.py auth <key>` | 授权：保存 KEY 并验证 |
 | `python scripts/vf.py verify` | 验证授权 + 列出可用人设 |
-| `python scripts/vf.py generate --topic "..." --persona <id> [--out 文件名] [--no-wait]` | 提交→默认等出片+下载本地+删服务器 |
+| `python scripts/vf.py generate --topic "..." --persona <id> [--out 文件名] [--no-wait]` | 生成（默认等出片+下载本地+清理）|
 | `python scripts/vf.py status <task_id>` | 查任务状态 |
-| `python scripts/vf.py download <task_id> --out file.mp4` | 下载成片 |
+| `python scripts/vf.py download <task_id> --out file.mp4` | 下载成片（默认下载后清理）|
 
 ## 注意
 
-- **内容合规审查在服务器侧执行**：违规脚本会被服务器拦下（任务返回 failed）。
-- 人设固定：每个号的头像/音色/语气跨视频永不变（真人感信任的核心）。
-- 纯 Python 标准库，**无需 pip install**。
-- 服务器地址可用环境变量 `VF_BASE_URL` 覆盖（默认 `https://h2-bottle.com/v1/video`）。
+- 主题需英文、健康向（违规会被拦，任务返回 failed）。
+- 人设固定：每个号的头像/音色/语气跨视频不变。
+- 纯 Python 标准库，无需 pip install。
