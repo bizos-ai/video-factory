@@ -184,6 +184,7 @@ def main():
     g.add_argument("--voice-ref", default=None, help="参考音色音频文件(本地路径，克隆该音色来配音)")
     g.add_argument("--voice-id", default=None, help="复用已克隆的 voice_id")
     g.add_argument("--voice-engine", default="elevenlabs", help="克隆引擎: elevenlabs / minimax")
+    g.add_argument("--qc-retry", type=int, default=2, help="每段视频质检不过最多重生成次数(0=关质检)")
     g.add_argument("--out", default="", help="下载文件名(默认 vf_<persona>_<task>.mp4)")
     g.add_argument("--no-wait", action="store_true", help="异步:只提交、不等待、不下载(批量场景)")
     g.add_argument("--keep-remote", action="store_true", help="保留服务器成片(默认下载到本地后删，不停留服务器)")
@@ -225,6 +226,7 @@ def main():
             "voice_ref_b64": voice_ref_b64,
             "voice_id": a.voice_id,
             "voice_engine": a.voice_engine,
+            "qc_retry": a.qc_retry,
         }
         tid = generate(a.topic, a.persona, opts)
         if a.no_wait:
