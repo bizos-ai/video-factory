@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Video Factory — 瘦客户端 (thin client)。
+"""BIZOS Video Factory — 瘦客户端 (thin client)。
 
 执行层（选题 / 脚本 / 内容审查 / 配音 / 数字人 A-roll / 对口型 / 字幕 / 合成）
-全部在服务器完成。本脚本不含任何算法、源 key 或 pipeline 实现，只做三件事：
+全部在服务器完成。本脚本不含任何算法、源 key 或 pipeline 实现，只做：
 
-  1. 用你的子 key 验证「是否有视频工厂访问权限」
-  2. 提交一个生成任务（主题 + 人设）
-  3. 轮询并取回成片
+  auth      —— 首次授权：保存你的 API KEY 到 .env 并验证
+  verify    —— 验证 key 是否有效且已开通视频权限，列出可用人设
+  generate  —— 提交一个生成任务（主题 + 人设）
+  status    —— 查任务状态
+  download  —— 下载成片
 
 API key 经服务器的 token hub 校验；只有被管理员开通「视频」权限的子 key 才能用。
 """
@@ -19,10 +21,14 @@ import urllib.request
 import urllib.error
 
 
+def _env_path():
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, "..", ".env")
+
+
 def _load_env():
     """从 repo 根目录的 .env 读取配置（员工只需填 .env，无需 export）。"""
-    here = os.path.dirname(os.path.abspath(__file__))
-    envp = os.path.join(here, "..", ".env")
+    envp = _env_path()
     if os.path.exists(envp):
         with open(envp, encoding="utf-8") as f:
             for line in f:
@@ -40,7 +46,7 @@ BASE = os.environ.get("VF_BASE_URL", "https://h2-bottle.com/v1/video").rstrip("/
 def _key():
     k = os.environ.get("VF_API_KEY", "").strip()
     if not k:
-        sys.exit("❌ 未配置 VF_API_KEY。把管理员给你的子 key 填到 .env（见 .env.example）。")
+        sys.exit("❌ 未授权。先运行：python scripts/vf.py auth <你的API_KEY>")
     return k
 
 
@@ -66,26 +72,51 @@ def _req(method, path, body=None, timeout=30):
         sys.exit(f"❌ 连不上服务器 {BASE}：{e}")
 
 
+def save_key(key):
+    """把 API KEY 写入 repo 根的 .env，然后立即验证。供首次授权用。"""
+    key = (key or "").strip()
+    if not key:
+        sys.exit("❌ 请提供 API KEY：python scripts/vf.py auth <你的API_KEY>")
+    envp = _env_path()
+    lines, found = [], False
+    if os.path.exists(envp):
+        with open(envp, encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith("VF_API_KEY="):
+                    lines.append(f"VF_API_KEY={key}\n")
+                    found = True
+                else:
+                    lines.append(line)
+    if not found:
+        lines.append(f"VF_API_KEY={key}\n")
+    with open(envp, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    os.environ["VF_API_KEY"] = key  # 当前进程立即生效
+    print(f"🔑 已保存 API KEY 到 {os.path.abspath(envp)}")
+    print("正在验证授权…")
+    verify()
+
+
 def verify():
-    """验证 key + 列出可用人设。验证不过会退出。"""
+    """验证 key + 列出可用人设。验证不过会退出（非 0）。"""
     code, body = _req("GET", "/health")
     if code == 200 and isinstance(body, dict) and body.get("ok"):
         ps = body.get("personas", [])
-        print("✅ key 有效，已开通视频工厂。可用人设 (persona_id)：")
+        print("✅ 授权成功，已开通视频工厂。可用人设 (persona_id)：")
         for p in ps:
             print(f"   - {p}")
         return ps
     if code == 401:
-        sys.exit("❌ 401：key 无效或未配置。检查 .env 里的 VF_API_KEY。")
+        sys.exit("❌ 401：未授权或 key 无效。运行 auth 重新授权：python scripts/vf.py auth <key>")
     if code == 403:
-        sys.exit("❌ 403：你的 key 还没开通视频权限。请管理员在 admin.html 给你打开「视频」开关。")
+        sys.exit("❌ 403：key 有效但还没开通视频权限。请管理员在 admin.html 给你打开「视频」开关。")
     sys.exit(f"❌ 验证失败 HTTP {code}: {body}")
 
 
 def generate(topic, persona):
     code, body = _req("POST", "/generate", {"topic": topic, "persona_id": persona})
     if code == 401:
-        sys.exit("❌ 401：key 无效。")
+        sys.exit("❌ 401：未授权。先运行：python scripts/vf.py auth <key>")
     if code == 403:
         sys.exit("❌ 403：没开通视频权限，找管理员。")
     if code != 200 or not isinstance(body, dict):
@@ -128,8 +159,10 @@ def download(tid, out):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Video Factory 瘦客户端")
+    ap = argparse.ArgumentParser(description="BIZOS Video Factory 瘦客户端")
     sub = ap.add_subparsers(dest="cmd")
+    au = sub.add_parser("auth", help="首次授权：保存 API KEY 到 .env 并验证")
+    au.add_argument("key", help="管理员发放的 API KEY（sk-xxx）")
     sub.add_parser("verify", help="验证 key 并列出可用人设")
     g = sub.add_parser("generate", help="提交一个生成任务")
     g.add_argument("--topic", required=True, help="视频主题（英文）")
@@ -143,7 +176,9 @@ def main():
     d.add_argument("--out", default="video.mp4")
     a = ap.parse_args()
 
-    if a.cmd == "verify":
+    if a.cmd == "auth":
+        save_key(a.key)
+    elif a.cmd == "verify":
         verify()
     elif a.cmd == "generate":
         tid = generate(a.topic, a.persona)
