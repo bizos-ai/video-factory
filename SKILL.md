@@ -85,6 +85,8 @@ python scripts/vf.py verify
   - `omni`：prompt + 头像参考图 → 多模态生成，可配 `--prompt` `--duration`
 - `--ref-image <URL>`：换头像 / 可灵首帧
 - `--ref-video <URL>`：可灵 motion 的参考动作视频（URL，接口吃 URL 不吃本地文件）
+- `--voice-ref <音频文件>`：传一段**参考音频** → EL 克隆那个音色来配音（**解锁自定义音色**，不限 persona 固定音色；铺量海螺路线也能用）
+- `--voice-id <id>`：复用已克隆的 voice_id（省一次克隆，10s–5min 清晰人声样本即可）
 
 例：
 ```bash

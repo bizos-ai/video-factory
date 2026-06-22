@@ -176,6 +176,9 @@ def main():
     g.add_argument("--orient", default="image", help="motion 朝向: image / video")
     g.add_argument("--duration", default="5", help="omni 时长(秒)")
     g.add_argument("--prompt", default=None, help="追加 / 覆盖生成 prompt")
+    g.add_argument("--voice-ref", default=None, help="参考音色音频文件(本地路径，克隆该音色来配音)")
+    g.add_argument("--voice-id", default=None, help="复用已克隆的 voice_id")
+    g.add_argument("--voice-engine", default="elevenlabs", help="克隆引擎: elevenlabs / minimax")
     g.add_argument("--wait", action="store_true", help="阻塞等到出片")
     g.add_argument("--out", default="", help="出片后下载到此文件（需配合 --wait）")
     s = sub.add_parser("status", help="查任务状态")
@@ -190,6 +193,11 @@ def main():
     elif a.cmd == "verify":
         verify()
     elif a.cmd == "generate":
+        voice_ref_b64 = None
+        if a.voice_ref:
+            import base64
+            with open(a.voice_ref, "rb") as vf:
+                voice_ref_b64 = "data:audio/mpeg;base64," + base64.b64encode(vf.read()).decode()
         opts = {
             "aroll_backend": a.backend,
             "kling_mode": a.kling_mode,
@@ -198,6 +206,9 @@ def main():
             "character_orientation": a.orient,
             "duration": a.duration,
             "extra_prompt": a.prompt,
+            "voice_ref_b64": voice_ref_b64,
+            "voice_id": a.voice_id,
+            "voice_engine": a.voice_engine,
         }
         tid = generate(a.topic, a.persona, opts)
         if a.wait:
