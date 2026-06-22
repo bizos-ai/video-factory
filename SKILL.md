@@ -74,6 +74,28 @@ python scripts/vf.py verify
 
 ---
 
+## 高级：指定输出模型 / 传参考（可选）
+
+默认走服务器设定的数字人方式。要**指定模型**或**传参考**时，generate 支持这些参数：
+
+- `--backend kling` —— 用可灵生成（其它可选：`hailuo` / `fal` / `mock`）
+- `--kling-mode avatar|motion|omni`：
+  - `avatar`（默认）：头像 + 配音 → 对口型说话（约 10+ 分钟，慢但稳）
+  - `motion`：头像 + **参考动作视频** → 模仿动作，需 `--ref-video <URL>`
+  - `omni`：prompt + 头像参考图 → 多模态生成，可配 `--prompt` `--duration`
+- `--ref-image <URL>`：换头像 / 可灵首帧
+- `--ref-video <URL>`：可灵 motion 的参考动作视频（URL，接口吃 URL 不吃本地文件）
+
+例：
+```bash
+# 可灵对口型
+python scripts/vf.py generate --topic "..." --persona sleep_sam --backend kling --kling-mode avatar --wait --out out.mp4
+# 可灵动作控制（传参考视频）
+python scripts/vf.py generate --topic "..." --persona fit_faye --backend kling --kling-mode motion --ref-video https://xxx/dance.mp4 --wait --out out.mp4
+```
+
+> 接口只吃文字主题 + 这些参数；参考素材要先有可访问 URL。不传任何参数时等价于服务器默认（海螺 + fal 对口型）。
+
 ## 命令参考
 
 | 命令 | 说明 |

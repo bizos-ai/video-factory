@@ -113,8 +113,10 @@ def verify():
     sys.exit(f"❌ 验证失败 HTTP {code}: {body}")
 
 
-def generate(topic, persona):
-    code, body = _req("POST", "/generate", {"topic": topic, "persona_id": persona})
+def generate(topic, persona, opts=None):
+    payload = {"topic": topic, "persona_id": persona}
+    payload.update({k: v for k, v in (opts or {}).items() if v is not None})
+    code, body = _req("POST", "/generate", payload)
     if code == 401:
         sys.exit("❌ 401：未授权。先运行：python scripts/vf.py auth <key>")
     if code == 403:
@@ -167,6 +169,13 @@ def main():
     g = sub.add_parser("generate", help="提交一个生成任务")
     g.add_argument("--topic", required=True, help="视频主题（英文）")
     g.add_argument("--persona", default="nutrition_nadia", help="人设 id（用 verify 查看）")
+    g.add_argument("--backend", default=None, help="输出模型: hailuo / fal / kling / mock（默认服务器设定）")
+    g.add_argument("--kling-mode", default="avatar", help="可灵模式: avatar(对口型) / motion(动作控制) / omni(多模态)")
+    g.add_argument("--ref-image", default=None, help="参考图 URL（换头像 / 可灵首帧）")
+    g.add_argument("--ref-video", default=None, help="参考动作视频 URL（可灵 motion 用）")
+    g.add_argument("--orient", default="image", help="motion 朝向: image / video")
+    g.add_argument("--duration", default="5", help="omni 时长(秒)")
+    g.add_argument("--prompt", default=None, help="追加 / 覆盖生成 prompt")
     g.add_argument("--wait", action="store_true", help="阻塞等到出片")
     g.add_argument("--out", default="", help="出片后下载到此文件（需配合 --wait）")
     s = sub.add_parser("status", help="查任务状态")
@@ -181,7 +190,16 @@ def main():
     elif a.cmd == "verify":
         verify()
     elif a.cmd == "generate":
-        tid = generate(a.topic, a.persona)
+        opts = {
+            "aroll_backend": a.backend,
+            "kling_mode": a.kling_mode,
+            "reference_image_url": a.ref_image,
+            "reference_video_url": a.ref_video,
+            "character_orientation": a.orient,
+            "duration": a.duration,
+            "extra_prompt": a.prompt,
+        }
+        tid = generate(a.topic, a.persona, opts)
         if a.wait:
             url = wait(tid)
             if url:
