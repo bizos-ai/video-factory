@@ -202,6 +202,10 @@ def main():
     en.add_argument("--photo", required=True, help="真实人物照片(本地路径)")
     en.add_argument("--scenes", nargs="*", default=[], help="场景图(本地路径,可多张)")
     en.add_argument("--voice-id", default=None, help="可选:已克隆音色 voice_id")
+    scp = sub.add_parser("script", help="只生成口播脚本(手动做视频时参考文案/指导找母版)")
+    scp.add_argument("--topic", required=True, help="主题(英文)")
+    scp.add_argument("--persona", default="nutrition_nadia", help="人设 id")
+    scp.add_argument("--hook", default=None, help="可选:hook 角度(同主题出变体)")
     a = ap.parse_args()
 
     if a.cmd == "auth":
@@ -269,6 +273,17 @@ def main():
             print(f"   现在可用：python scripts/vf.py generate --topic \"...\" --persona {a.persona_id}")
         else:
             sys.exit(f"❌ enroll 失败 HTTP {code}: {body}")
+    elif a.cmd == "script":
+        code, body = _req("POST", "/script", {
+            "topic": a.topic, "persona_id": a.persona, "extra_prompt": a.hook})
+        if code == 200 and isinstance(body, dict):
+            print("\n📝 口播脚本\n")
+            print("【Hook】", body.get("hook", ""))
+            print("【Body】", body.get("body", ""))
+            print("【CTA 】", body.get("cta", ""))
+            print("\n— 完整文案（配音/对照母版用）—\n" + (body.get("full_text", "") or ""))
+        else:
+            sys.exit(f"❌ 脚本生成失败 HTTP {code}: {body}")
     else:
         ap.print_help()
 
